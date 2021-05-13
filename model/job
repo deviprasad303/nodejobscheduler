@@ -1,0 +1,181 @@
+const sql = require("./dbconn.js");
+const redis = require("redis");
+const client = redis.createClient(6379, 'localhost');
+
+
+const Job = function(job) {
+  this.Project = job.Project;
+  this.Priority = job.Priority;
+  this.Status = job.Status;
+  this.Data = job.Data;
+  this.CreatedAt = job.CreatedAt;
+  this.LasttimeStamped = job.LasttimeStamped;
+  this.IsSileneced = job.IsSileneced;
+};
+
+function twoDigits(d) {
+  if(0 <= d && d < 10) return "0" + d.toString();
+  if(-10 < d && d < 0) return "-0" + (-1*d).toString();
+  return d.toString();
+}
+
+Date.prototype.toMysqlFormat = function() {
+  return this.getUTCFullYear() + "-" + twoDigits(1 + this.getUTCMonth()) + "-" + twoDigits(this.getUTCDate()) + " " + twoDigits(this.getUTCHours()) + ":" + twoDigits(this.getUTCMinutes()) + ":" + twoDigits(this.getUTCSeconds());
+};
+
+Job.create = (newJob, result) => {
+  if( newJob.CreatedAt !== null)
+    newJob.CreatedAt =  (new Date()).toMysqlFormat();
+  if( typeof s !== 'undefined')
+    newJob.LastTimeStamped = newJob.LastTimeStamped.toMysqlFormat();
+  if(newJob.Priority === 'HIGH')
+  {
+    newJob.Priority = 0;
+  }
+  if(newJob.Priority === 'MEDIUM')
+  {
+    newJob.Priority = 1;
+  }
+
+  if(newJob.Priority === 'LOW')
+  {
+    newJob.Priority = 2;
+  }
+  else
+  {
+    newJob.Priority = 2;
+  }
+
+  sql.query("INSERT INTO jobs SET ?", newJob, (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(err, null);
+      return;
+    }
+
+    console.log("created Job: ", { id: res.insertId, ...newJob });
+
+});
+};
+
+
+
+
+Job.getTop1 = result => {
+  client.zrange('jobs',0,0,function(err, reply) {
+    if(reply) {
+      // reply is null when the key is missing
+      let jobs = JSON.parse(reply);
+      client.zrem('jobs',reply);
+      result( null,jobs);
+    }
+    else
+    {
+      sql.query(
+        "SELECT top 1 FROM jobs  where Status= 'scheduled' and IsSilenced IS NULL order by Priority,CreatedAt asc LIMIT 1",
+        (err, rows, fields) => {
+          if (err) {
+            console.log("error: ", err);
+            result(null, err);
+            return;
+          }
+          result( null,rows);
+
+        });
+    }
+  });
+
+};
+
+
+Job.getTop5 = result => {
+
+      sql.query(
+        "SELECT * FROM jobs  where Status= 'scheduled' and IsSilenced IS NULL order by Priority,CreatedAt desc LIMIT 5;",
+        (err, rows, fields) => {
+          if (err) {
+            console.log("error: ", err);
+            result(null, err);
+            return;
+          }
+          result( null,rows);
+  });
+
+};
+
+
+
+Job.updateStatus = ( id,status, result) => {
+  sql.query(
+    "UPDATE jobs SET status = ? WHERE id = ?",
+    [ status,id],
+    (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(null, err);
+      return;
+    }
+
+    if (res.affectedRows == 0) {
+    return;
+  }
+
+  console.log("updated job: ");
+  result(null, { id: id, ...res });
+}
+);
+};
+
+
+Job.updateStatuswithNoCallBack = ( id,status, result) => {
+  sql.query(
+    "UPDATE jobs SET status = ? WHERE id = ?",
+    [ status,id],
+    (err, res) => {
+      if (err) {
+        console.log("error: ", err);
+      }
+
+      if (res.affectedRows == 0) {
+        // not found Customer with the id
+        //result({ kind: "not_found" }, null);
+      }
+
+      console.log("updated job: ");
+    }
+  );
+};
+
+Job.remove = (id, result) => {
+  sql.query("DELETE FROM customers WHERE id = ?", id, (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(null, err);
+      return;
+    }
+
+    if (res.affectedRows == 0) {
+    // not found Customer with the id
+    result({ kind: "not_found" }, null);
+    return;
+  }
+
+  console.log("deleted customer with id: ", id);
+  result(null, res);
+});
+};
+
+Job.removeAll = result => {
+  sql.query("DELETE FROM customers", (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(null, err);
+      return;
+    }
+
+    console.log(`deleted ${res.affectedRows} customers`);
+  result(null, res);
+});
+};
+
+module.exports = Job;
