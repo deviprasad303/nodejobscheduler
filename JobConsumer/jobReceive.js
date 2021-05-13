@@ -94,7 +94,7 @@ app.listen(PORT, () => {
               Object.values(msgArr)
 
             });*/
-            Job.updateStatuswithNoCallBack(Object.values(msgArr[i])[Object.keys(msgArr[i]).indexOf('Id')],'Processing');
+            Job.updateStatuswithNoCallBack(Object.values(msgArr[i])[Object.keys(msgArr[i]).indexOf('Id')],'Processing') ;
           }
 
       }, { noAck: true });

@@ -24,26 +24,20 @@ Date.prototype.toMysqlFormat = function() {
 };
 
 Job.create = (newJob, result) => {
-  if( newJob.CreatedAt !== null)
-    newJob.CreatedAt =  (new Date()).toMysqlFormat();
-  if( typeof s !== 'undefined')
+  if (newJob.CreatedAt !== null)
+    newJob.CreatedAt = (new Date()).toMysqlFormat();
+  if (typeof s !== 'undefined')
     newJob.LastTimeStamped = newJob.LastTimeStamped.toMysqlFormat();
-  if(newJob.Priority === 'HIGH')
-  {
+  if (newJob.Priority.toUpperCase() === 'HIGH'.toUpperCase()) {
     newJob.Priority = 0;
-  }
-  if(newJob.Priority === 'MEDIUM')
-  {
-    newJob.Priority = 1;
-  }
-
-  if(newJob.Priority === 'LOW')
-  {
-    newJob.Priority = 2;
-  }
-  else
-  {
-    newJob.Priority = 2;
+  } else {
+    if (newJob.Priority.toUpperCase() === 'MEDIUM'.toUpperCase()) {
+      newJob.Priority = 1;
+    } else {
+      if (newJob.Priority.toUpperCase() === 'LOW'.toUpperCase()) {
+        newJob.Priority = 2;
+      }
+    }
   }
 
   sql.query("INSERT INTO jobs SET ?", newJob, (err, res) => {
@@ -72,7 +66,7 @@ Job.getTop1 = result => {
     else
     {
       sql.query(
-        "SELECT top 1 FROM jobs  where Status= 'scheduled' and IsSilenced IS NULL order by Priority,CreatedAt asc LIMIT 1",
+        "SELECT * FROM jobs  where Status= 'scheduled' and IsSilenced IS NULL order by Priority,CreatedAt asc LIMIT 1",
         (err, rows, fields) => {
           if (err) {
             console.log("error: ", err);
@@ -91,7 +85,7 @@ Job.getTop1 = result => {
 Job.getTop5 = result => {
 
       sql.query(
-        "SELECT * FROM jobs  where Status= 'scheduled' and IsSilenced IS NULL order by Priority,CreatedAt desc LIMIT 5;",
+        "SELECT * FROM jobs  where Status= 'scheduled' and IsSilenced IS NULL order by Priority,CreatedAt asc LIMIT 5;",
         (err, rows, fields) => {
           if (err) {
             console.log("error: ", err);
